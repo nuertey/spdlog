@@ -351,6 +351,15 @@ private:
     }
 };
 
+// Thread name - %q
+class q_formatter SPDLOG_FINAL : public flag_formatter
+{
+    void format(details::log_msg &msg, const std::tm &) override
+    {
+        msg.formatted << msg.thread_name;
+    }
+};
+
 // Thread id
 class t_formatter SPDLOG_FINAL : public flag_formatter
 {
@@ -552,6 +561,10 @@ inline void spdlog::pattern_formatter::handle_flag(char flag)
         _formatters.emplace_back(new details::short_level_formatter());
         break;
 
+    case ('q'):
+        _formatters.emplace_back(new details::q_formatter());
+        break;
+        
     case ('t'):
         _formatters.emplace_back(new details::t_formatter());
         break;

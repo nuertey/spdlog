@@ -17,6 +17,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <thread>
+#include <sys/prctl.h>
 
 #ifdef _WIN32
 
@@ -353,6 +354,42 @@ inline size_t thread_id()
 #else // cache thread id in tls
     static thread_local const size_t tid = _thread_id();
     return tid;
+#endif
+}
+
+inline void thread_name(char * name, size_t length)
+{    
+#ifdef _WIN32
+    HANDLE threadHandle = ::OpenThread(THREAD_QUERY_INFORMATION, false, static_cast<DWORD>(thread_id()));
+    if (threadHandle)
+    {
+	wchar_t* data;
+	HRESULT hr = ::GetThreadDescription(threadHandle, &data);
+	if (SUCCEEDED(hr))
+	{ 
+	    std::wcstombs(name, data, length);
+	    ::LocalFree(data);
+	}
+    }
+
+    ::CloseHandle(threadHandle);
+#else
+    static const size_t    THREAD_NAME_LENGTH = 16;  // Length is restricted by the OS. Includes null-termination.
+    
+    if (THREAD_NAME_LENGTH <= length)
+    {
+        int retval = 0;
+        
+        retval = prctl(PR_GET_NAME, name);
+        if (-1 == retval)
+        {
+	    throw spdlog_ex("Warning! Thread name get failed.", errno);
+        }
+    }
+    else
+    {
+        throw spdlog_ex("Error! Insufficient buffer length.");
+    }
 #endif
 }
 
