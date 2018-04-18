@@ -351,18 +351,21 @@ private:
     }
 };
 
-// Thread id and consequent thread name
+// Thread name - %q
+class q_formatter SPDLOG_FINAL : public flag_formatter
+{    
+    void format(details::log_msg &msg, const std::tm &) override
+    {	
+        msg.formatted << os::thread_name();
+    }
+};
+
+// Thread id
 class t_formatter SPDLOG_FINAL : public flag_formatter
-{
-    static const size_t    RECOMMENDED_BUFFER_SIZE = 20;
-    
+{    
     void format(details::log_msg &msg, const std::tm &) override
     {
         msg.formatted << msg.thread_id;
-	
-        char theThreadName[RECOMMENDED_BUFFER_SIZE];
-        os::thread_name(theThreadName, sizeof(theThreadName));
-        msg.formatted << " = " << std::string(theThreadName);
     }
 };
 
@@ -556,6 +559,10 @@ inline void spdlog::pattern_formatter::handle_flag(char flag)
 
     case 'L':
         _formatters.emplace_back(new details::short_level_formatter());
+        break;
+	
+    case ('q'):
+        _formatters.emplace_back(new details::q_formatter());
         break;
         
     case ('t'):

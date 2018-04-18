@@ -357,7 +357,7 @@ inline size_t thread_id()
 #endif
 }
 
-inline void thread_name(char * name, size_t length)
+inline void _thread_name(char * name, size_t length)
 {    
 #ifdef _WIN32
     HANDLE threadHandle = ::OpenThread(THREAD_QUERY_INFORMATION, false, static_cast<DWORD>(thread_id()));
@@ -390,6 +390,27 @@ inline void thread_name(char * name, size_t length)
     {
         throw spdlog_ex("Error! Insufficient buffer length.");
     }
+#endif
+}
+
+// Return current thread name(from thread local storage)
+inline std::string thread_name()
+{
+    static const size_t    RECOMMENDED_BUFFER_SIZE = 20;
+    char buffer[RECOMMENDED_BUFFER_SIZE];
+    
+#if defined(SPDLOG_DISABLE_TID_CACHING) || (defined(_MSC_VER) && (_MSC_VER < 1900)) || defined(__cplusplus_winrt) ||                       \
+    (defined(__clang__) && !__has_feature(cxx_thread_local))
+    _thread_name(buffer, sizeof(buffer));
+    return std::string(buffer);
+#else // cache thread name in thread local storage
+    static thread_local std::string theThreadName; 
+    if (theThreadName.empty())
+    {
+	_thread_name(buffer, sizeof(buffer));
+	theThreadName = std::string(buffer);
+    }
+    return theThreadName;
 #endif
 }
 
